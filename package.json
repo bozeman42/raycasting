@@ -1,0 +1,18 @@
+{
+  "name": "raytracing",
+  "version": "1.0.0",
+  "main": "server/server.js",
+  "author": "Aaron Kvarnlov-Leverty",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.17.1"
+  },
+  "devDependencies": {
+    "nodemon": "^1.19.1",
+    "rollup": "^1.14.4"
+  },
+  "scripts": {
+    "build": "rollup src/index.js --file server/public/scripts/bundle.js --format umd",
+    "start": "nodemon server/server.js"
+  }
+}
