@@ -7,6 +7,7 @@
     constructor(width, height, color, bgColor) {
       this.canvas = document.createElement('canvas');
       this.ctx = this.canvas.getContext('2d');
+      this.ctx.scale(2,2);
       this.canvas.width = width;
       this.canvas.height = height;
       this.ctx.strokeStyle = color;
@@ -149,7 +150,7 @@
       const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denominator;
       const u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / denominator;
 
-      if (u > 0 && t > 0 && t < 1) {
+      if (u >= 0 && t >= 0 && t <= 1) {
         const point = new Vec2(x1 + t * (x2 - x1), y1 + t * (y2 - y1));
         return point
       } else {
@@ -164,7 +165,7 @@
       this.pos = new Vec2(x,y);
       this.rays = [];
       const {posX,posY} = this.pos;
-      for (let i = 0; i < 360; i += 30) {
+      for (let i = 0; i < 360; i += .1) {
         this.rays.push(new Ray(posX, posY, i));
       }
       this.points = [];
@@ -202,15 +203,23 @@
     }
 
     draw() {
-      const { ctx, pos: {x: posX, y: posY}} = this;
+      const { ctx, pos} = this;
       // this.rays.forEach(ray => ray.draw(ctx))
-      this.points.forEach(({x, y}) => {
+      this.points.forEach((point) => {
+        const { x, y } = point;
         ctx.beginPath();
-        ctx.moveTo(posX,posY);
-        ctx.lineTo(x,y);
+        const value = pos.distance(point);
+        const distance = value > 10 ? value : 10;
+        const intensity = mapIntensity(distance);
+        ctx.strokeStyle = `RGB(${intensity},${intensity},0)`;
+        ctx.rect(x,y,1,1);
         ctx.stroke();
       });
     }
+  }
+
+  function mapIntensity(distance) {
+    return 255 / Math.pow(distance / 150, 2)
   }
 
   class Boundary {
@@ -223,12 +232,77 @@
       const { a, b } = this;
       ctx.beginPath();
       const style = ctx.strokeStyle;
-      ctx.strokeStyle = 'gray';
+      ctx.strokeStyle = '#222';
       ctx.moveTo(a.x, a.y);
       ctx.lineTo(b.x, b.y);
       ctx.stroke();
       ctx.strokeStyle = style;
     }
+  }
+
+  const INTERVAL = 0.1;
+
+  class Circle {
+    constructor(x,y,radius) {
+      this.pos = new Vec2(x,y);
+      this.radius = radius;
+      this.noBreaks = true;
+      this.boundaries = [];
+      this.buildCircle();
+    }
+
+    draw(ctx) {
+      this.boundaries.forEach(boundary => boundary.draw(ctx));
+    }
+
+    buildCircle() {
+      const { sin, cos, PI } = Math;
+      const { pos: { x: xPos, y: yPos }, radius: r, noBreaks } = this;
+      let x = xPos + r*sin(0);
+      let y = yPos + r*cos(0);
+      let x2, y2;
+      for (let theta = INTERVAL; theta <= PI * 2; theta += INTERVAL) {
+        x2 = xPos + r*sin(theta);
+        y2 = yPos + r*cos(theta);
+        if (Math.round(theta / INTERVAL) % 2 || noBreaks) {
+          this.boundaries.push(new Boundary(x,y,x2,y2));
+        }
+        x = x2;
+        y = y2;
+      }
+      x2 = xPos + r*sin(0);
+      y2 = yPos + r*cos(0);
+      this.boundaries.push(new Boundary(x,y,x2,y2));
+    }
+  }
+
+  class Box {
+    constructor(position, width, height) {
+      this.position = position;
+      this.width = width;
+      this.height = height;
+      this.sides = [];
+      this.buildSides();
+    }
+
+    buildSides() {
+      const {
+        position: { x, y },
+        width,
+        height
+      } = this;
+      this.sides.push(
+        new Boundary( x, y, x + width, y),
+        new Boundary( x, y, x, y + height),
+        new Boundary( x + width, y, x + width, y + height),
+        new Boundary( x, y + height, x + width, y + height)
+      );
+    }
+
+    draw() {
+      this.sides.forEach(side => side.draw());
+    }
+
   }
 
   const w = window.innerWidth;
@@ -238,15 +312,36 @@
 
   document.body.appendChild(mainLayer.canvas);
   const boundaries = [...boxWalls(mainLayer)];
-  for (let i = 0; i < 3; i++) {
-    boundaries.push(createWall());
+
+  for(let i = 0; i < 20; i++) {
+    boundaries.push(...new Box(
+      new Vec2(Math.random() * w, Math.random() * h)
+      , (Math.random() * 200),(Math.random() * 200))
+      .sides
+      // ...buildCircle().boundaries
+      );
   }
+
+  // for (let i = 0; i < 3; i++) {
+  //   boundaries.push(createWall())
+  // }
+
+  boundaries.push(...new Circle(Math.random() * w,Math.random() * h ,5).boundaries, ...new Circle(Math.random() * w, Math.random() * h, 100).boundaries);
+
   const source = new RaySource(100,200, mainLayer.ctx);
+  let drawBoundaries = false;
+
+  document.onclick = () => {
+    drawBoundaries = !drawBoundaries;
+    draw(mainLayer);
+  };
 
   function draw (layer) {
     const { ctx } = layer;
     layer.clear();
-    boundaries.forEach(boundary => boundary.draw(ctx));
+    if (drawBoundaries) {
+      boundaries.forEach(boundary => boundary.draw(ctx));
+    }
     source.cast(boundaries);
     source.draw(ctx);
   }
@@ -257,13 +352,6 @@
     draw(mainLayer);
   });
 
-  function random(max) {
-    return Math.random() * max
-  }
-
-  function createWall() {
-    return new Boundary(random(mainLayer.canvas.width),random(mainLayer.canvas.height),random(mainLayer.canvas.width),random(mainLayer.canvas.height))
-  }
 
   function boxWalls(layer) {
     const {
@@ -279,5 +367,7 @@
       new Boundary(width, 0, width, height)
     ]
   }
+
+  draw(mainLayer);
 
 }));

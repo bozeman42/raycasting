@@ -10,7 +10,7 @@ class Boundary {
     const { a, b } = this
     ctx.beginPath()
     const style = ctx.strokeStyle
-    ctx.strokeStyle = 'gray'
+    ctx.strokeStyle = '#222'
     ctx.moveTo(a.x, a.y)
     ctx.lineTo(b.x, b.y)
     ctx.stroke()

@@ -7,7 +7,7 @@ class RaySource {
     this.pos = new Vec2(x,y)
     this.rays = []
     const {posX,posY} = this.pos
-    for (let i = 0; i < 360; i += 30) {
+    for (let i = 0; i < 360; i += .1) {
       this.rays.push(new Ray(posX, posY, i))
     }
     this.points = []
@@ -45,15 +45,23 @@ class RaySource {
   }
 
   draw() {
-    const { ctx, pos: {x: posX, y: posY}} = this
+    const { ctx, pos} = this
     // this.rays.forEach(ray => ray.draw(ctx))
-    this.points.forEach(({x, y}) => {
+    this.points.forEach((point) => {
+      const { x, y } = point
       ctx.beginPath()
-      ctx.moveTo(posX,posY)
-      ctx.lineTo(x,y)
+      const value = pos.distance(point)
+      const distance = value > 10 ? value : 10
+      const intensity = mapIntensity(distance)
+      ctx.strokeStyle = `RGB(${intensity},${intensity},0)`
+      ctx.rect(x,y,1,1)
       ctx.stroke()
     })
   }
+}
+
+function mapIntensity(distance) {
+  return 255 / Math.pow(distance / 150, 2)
 }
 
 export default RaySource

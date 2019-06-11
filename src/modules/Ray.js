@@ -48,7 +48,7 @@ class Ray {
     const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denominator
     const u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / denominator
 
-    if (u > 0 && t > 0 && t < 1) {
+    if (u >= 0 && t >= 0 && t <= 1) {
       const point = new Vec2(x1 + t * (x2 - x1), y1 + t * (y2 - y1))
       return point
     } else {
